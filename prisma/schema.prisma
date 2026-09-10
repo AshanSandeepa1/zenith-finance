@@ -1,0 +1,172 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Auth.js (NextAuth v5) required models — @auth/prisma-adapter schema shape.
+// Note: this "Account" is NextAuth's OAuth account link, distinct from the
+// app's own FinancialAccount model below (bank/wallet/cash balances).
+// ---------------------------------------------------------------------------
+
+model User {
+  id             String    @id @default(cuid())
+  name           String?
+  email          String    @unique
+  emailVerified  DateTime?
+  image          String?
+  hashedPassword String?
+  baseCurrency   Currency  @default(USD)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  accounts          Account[]
+  sessions          Session[]
+  financialAccounts FinancialAccount[]
+  transactions      Transaction[]
+  sinkingFunds      SinkingFund[]
+  debtTrackers      DebtTracker[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ---------------------------------------------------------------------------
+// Domain models
+// ---------------------------------------------------------------------------
+
+enum Currency {
+  USD
+  LKR
+}
+
+enum TransactionCategory {
+  INCOME
+  GROCERIES_BILLS
+  CAMPUS_FEES
+  DISCRETIONARY
+  SINKING_FUND
+  DEBT_PAYMENT
+  OTHER
+}
+
+enum DebtStatus {
+  ACTIVE
+  EXPIRING_THIS_MONTH
+  CLEARED
+}
+
+model FinancialAccount {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  type      String
+  balance   Float    @default(0)
+  currency  Currency @default(LKR)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([userId])
+}
+
+model Transaction {
+  id                 String              @id @default(cuid())
+  userId             String
+  financialAccountId String?
+  amount             Float
+  currency           Currency            @default(LKR)
+  category           TransactionCategory
+  description        String?
+  isRecurring        Boolean             @default(false)
+  date               DateTime            @default(now())
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  financialAccount FinancialAccount? @relation(fields: [financialAccountId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([userId, category])
+}
+
+model SinkingFund {
+  id                  String    @id @default(cuid())
+  userId              String
+  name                String
+  category            String
+  targetAmount        Float
+  currentAmount       Float     @default(0)
+  monthlyContribution Float     @default(0)
+  targetDate          DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model DebtTracker {
+  id                 String     @id @default(cuid())
+  userId             String
+  vendor             String
+  itemName           String
+  totalAmount        Float
+  monthlyInstallment Float
+  remainingMonths    Int
+  expiryDate         DateTime
+  status             DebtStatus @default(ACTIVE)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
