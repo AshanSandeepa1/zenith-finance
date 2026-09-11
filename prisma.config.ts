@@ -12,6 +12,11 @@ export default defineConfig({
   },
   engine: "classic",
   datasource: {
-    url: env("DATABASE_URL"),
+    // CLI operations (migrate/seed) need a direct, non-pooled connection —
+    // Supabase's transaction-mode pooler (DATABASE_URL) doesn't support the
+    // session-level advisory locks the migration engine needs, and hangs
+    // instead of failing fast. The generated Client still uses DATABASE_URL
+    // at runtime via schema.prisma's own datasource block.
+    url: env("DIRECT_URL"),
   },
 });

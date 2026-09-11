@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/lib/validations";
 import { authConfig } from "@/auth.config";
+import { bootstrapNewUser } from "@/lib/bootstrap-user";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -56,6 +57,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.id as string;
       }
       return session;
+    },
+  },
+  events: {
+    // Fires for adapter-created users only (OAuth sign-ups) — the
+    // credentials registration action calls bootstrapNewUser directly since
+    // it creates the User row itself, bypassing the adapter.
+    async createUser({ user }) {
+      if (user.id) await bootstrapNewUser(user.id);
     },
   },
 });

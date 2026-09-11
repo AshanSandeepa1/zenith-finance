@@ -1,66 +1,65 @@
 "use client";
 
-import { ShoppingCart, GraduationCap, Sparkles, PiggyBank, CircleDollarSign } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
-import type { TransactionCategory } from "@prisma/client";
 import { useCurrency } from "@/components/providers/currency-provider";
-
-const CATEGORY_META: Record<TransactionCategory, { label: string; icon: LucideIcon; tone: string }> = {
-  GROCERIES_BILLS: { label: "Groceries & Bills", icon: ShoppingCart, tone: "text-rose-400 bg-rose-500/10" },
-  CAMPUS_FEES: { label: "Campus Fees", icon: GraduationCap, tone: "text-indigo-400 bg-indigo-500/10" },
-  DISCRETIONARY: { label: "Discretionary", icon: Sparkles, tone: "text-amber-400 bg-amber-500/10" },
-  SINKING_FUND: { label: "Sinking Funds", icon: PiggyBank, tone: "text-emerald-400 bg-emerald-500/10" },
-  DEBT_PAYMENT: { label: "Debt Payment", icon: CircleDollarSign, tone: "text-rose-400 bg-rose-500/10" },
-  OTHER: { label: "Other", icon: CircleDollarSign, tone: "text-muted-foreground bg-secondary" },
-  INCOME: { label: "Income", icon: CircleDollarSign, tone: "text-emerald-400 bg-emerald-500/10" },
-};
-
-const DISPLAY_ORDER: TransactionCategory[] = [
-  "GROCERIES_BILLS",
-  "CAMPUS_FEES",
-  "DISCRETIONARY",
-  "SINKING_FUND",
-];
+import { CategoryIcon } from "@/components/dashboard/category-icon";
+import { categoryColorClasses } from "@/lib/category-colors";
+import type { Category } from "@prisma/client";
 
 export function ExpenseCategoryList({
   expensesByCategory,
 }: {
-  expensesByCategory: { category: TransactionCategory; amountLKR: number }[];
+  expensesByCategory: { category: Category; amountLKR: number }[];
 }) {
   const { format } = useCurrency();
   const total = expensesByCategory.reduce((sum, e) => sum + e.amountLKR, 0) || 1;
+  const sorted = [...expensesByCategory].sort((a, b) => b.amountLKR - a.amountLKR);
 
   return (
     <div className="glass-card rounded-2xl p-5">
       <p className="text-sm font-medium mb-4">Monthly outflows</p>
       <div className="flex flex-col divide-y divide-border">
-        {DISPLAY_ORDER.map((category) => {
-          const entry = expensesByCategory.find((e) => e.category === category);
-          const amount = entry?.amountLKR ?? 0;
-          const meta = CATEGORY_META[category];
-          const Icon = meta.icon;
-          const percent = Math.round((amount / total) * 100);
+        {sorted.map(({ category, amountLKR }) => {
+          const tone = categoryColorClasses(category.color);
+          const percent = Math.round((amountLKR / total) * 100);
+          const overBudget = category.budgetMonthly != null && amountLKR > category.budgetMonthly;
+          const budgetPercent =
+            category.budgetMonthly && category.budgetMonthly > 0
+              ? Math.min(100, Math.round((amountLKR / category.budgetMonthly) * 100))
+              : null;
 
           return (
-            <div key={category} className="flex items-center gap-4 py-3">
-              <div className={`flex h-9 w-9 items-center justify-center rounded-lg shrink-0 ${meta.tone}`}>
-                <Icon className="h-4 w-4" />
+            <div key={category.id} className="flex items-center gap-4 py-3">
+              <div className={`flex h-9 w-9 items-center justify-center rounded-lg shrink-0 ${tone.bg} ${tone.text}`}>
+                <CategoryIcon name={category.icon} className="h-4 w-4" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">{meta.label}</span>
-                  <span className="tabular-nums">{format(amount, "LKR")}</span>
+                  <span className="font-medium">{category.name}</span>
+                  <span className="tabular-nums flex items-center gap-1.5">
+                    {format(amountLKR, "LKR")}
+                    {category.budgetMonthly != null && (
+                      <span className="text-xs text-muted-foreground">
+                        / {format(category.budgetMonthly, "LKR")}
+                      </span>
+                    )}
+                  </span>
                 </div>
                 <div className="mt-1.5 h-1.5 rounded-full bg-secondary overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-indigo-500"
-                    style={{ width: `${percent}%` }}
+                    className={`h-full rounded-full ${overBudget ? "bg-rose-500" : tone.bar}`}
+                    style={{ width: `${budgetPercent ?? percent}%` }}
                   />
                 </div>
+                {overBudget && (
+                  <p className="mt-1 text-xs text-rose-400">Over budget this month</p>
+                )}
               </div>
             </div>
           );
         })}
+        {sorted.length === 0 && (
+          <p className="py-4 text-sm text-muted-foreground">No expense categories yet.</p>
+        )}
       </div>
     </div>
   );

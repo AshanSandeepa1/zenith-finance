@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -16,19 +16,22 @@ export function RegisterForm() {
   const router = useRouter();
   const [state, formAction, isPending] = useActionState(registerUser, initialState);
 
+  // Controlled — a successful native form submission resets the DOM fields
+  // before this effect's re-render runs, so email/password must be read from
+  // React state here, not from the form elements.
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
   useEffect(() => {
     if (!state.success) return;
-
-    const formEl = document.getElementById("register-form") as HTMLFormElement | null;
-    const email = (formEl?.elements.namedItem("email") as HTMLInputElement | null)?.value;
-    const password = (formEl?.elements.namedItem("password") as HTMLInputElement | null)?.value;
     if (!email || !password) return;
 
     signIn("credentials", { email, password, redirect: false }).then(() => {
       router.push("/dashboard");
       router.refresh();
     });
-  }, [state.success, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.success]);
 
   return (
     <Card className="glass-card">
@@ -37,14 +40,22 @@ export function RegisterForm() {
         <CardDescription>Start tracking your net worth with Zenith Finance</CardDescription>
       </CardHeader>
       <CardContent>
-        <form id="register-form" action={formAction} className="space-y-4">
+        <form action={formAction} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Name</Label>
             <Input id="name" name="name" type="text" required autoComplete="name" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" type="email" required autoComplete="email" />
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
@@ -55,6 +66,8 @@ export function RegisterForm() {
               required
               minLength={8}
               autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
             />
           </div>
           {state.error && <p className="text-sm text-rose-500">{state.error}</p>}

@@ -3,6 +3,7 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validations";
+import { bootstrapNewUser } from "@/lib/bootstrap-user";
 
 export type RegisterActionState = {
   error?: string;
@@ -32,9 +33,11 @@ export async function registerUser(
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  await prisma.user.create({
+  const user = await prisma.user.create({
     data: { name, email, hashedPassword },
   });
+
+  await bootstrapNewUser(user.id);
 
   return { success: true };
 }

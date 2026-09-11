@@ -2,22 +2,12 @@
 
 import { ResponsiveContainer, Sankey, Tooltip, Layer } from "recharts";
 import { useCurrency } from "@/components/providers/currency-provider";
-import type { TransactionCategory } from "@prisma/client";
-
-const CATEGORY_LABELS: Record<TransactionCategory, string> = {
-  INCOME: "Income",
-  GROCERIES_BILLS: "Groceries & Bills",
-  CAMPUS_FEES: "Campus Fees",
-  DISCRETIONARY: "Discretionary",
-  SINKING_FUND: "Sinking Funds",
-  DEBT_PAYMENT: "Debt Payment",
-  OTHER: "Other",
-};
+import type { Category } from "@prisma/client";
 
 const NODE_COLORS = ["#6366f1", "#f43f5e", "#fb923c", "#a78bfa", "#38bdf8", "#f43f5e", "#94a3b8", "#10b981"];
 
 type Props = {
-  expensesByCategory: { category: TransactionCategory; amountLKR: number }[];
+  expensesByCategory: { category: Category; amountLKR: number }[];
   netCashflowSurplusLKR: number;
 };
 
@@ -28,7 +18,7 @@ export function CashflowSankey({ expensesByCategory, netCashflowSurplusLKR }: Pr
 
   const nodes: { name: string }[] = [
     { name: "Income" },
-    ...activeExpenses.map((e) => ({ name: CATEGORY_LABELS[e.category] })),
+    ...activeExpenses.map((e) => ({ name: e.category.name })),
   ];
 
   const links: { source: number; target: number; value: number }[] = activeExpenses.map(

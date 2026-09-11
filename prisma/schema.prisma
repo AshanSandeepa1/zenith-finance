@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -27,7 +24,9 @@ model User {
   emailVerified  DateTime?
   image          String?
   hashedPassword String?
-  baseCurrency   Currency  @default(USD)
+  // ISO 4217 code (e.g. "USD", "LKR") — validated against src/lib/currencies.ts,
+  // not a DB enum, so adding a currency never needs a migration.
+  baseCurrency   String    @default("USD")
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -35,7 +34,8 @@ model User {
   sessions          Session[]
   financialAccounts FinancialAccount[]
   transactions      Transaction[]
-  sinkingFunds      SinkingFund[]
+  categories        Category[]
+  goals             Goal[]
   debtTrackers      DebtTracker[]
 }
 
@@ -79,19 +79,14 @@ model VerificationToken {
 // Domain models
 // ---------------------------------------------------------------------------
 
-enum Currency {
-  USD
-  LKR
+enum CategoryType {
+  INCOME
+  EXPENSE
 }
 
-enum TransactionCategory {
-  INCOME
-  GROCERIES_BILLS
-  CAMPUS_FEES
-  DISCRETIONARY
-  SINKING_FUND
-  DEBT_PAYMENT
-  OTHER
+enum GoalType {
+  GENERAL
+  EMERGENCY_FUND
 }
 
 enum DebtStatus {
@@ -100,13 +95,33 @@ enum DebtStatus {
   CLEARED
 }
 
+model Category {
+  id            String       @id @default(cuid())
+  userId        String
+  name          String
+  icon          String
+  color         String
+  type          CategoryType @default(EXPENSE)
+  // Optional monthly budget for this category, in the category's implicit
+  // tracking currency (LKR) — used for the overspend-alert feature.
+  budgetMonthly Float?
+  isDefault     Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([userId])
+}
+
 model FinancialAccount {
   id        String   @id @default(cuid())
   userId    String
   name      String
   type      String
   balance   Float    @default(0)
-  currency  Currency @default(LKR)
+  currency  String   @default("LKR")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -117,31 +132,36 @@ model FinancialAccount {
 }
 
 model Transaction {
-  id                 String              @id @default(cuid())
+  id                 String   @id @default(cuid())
   userId             String
   financialAccountId String?
+  categoryId         String?
   amount             Float
-  currency           Currency            @default(LKR)
-  category           TransactionCategory
+  currency           String   @default("LKR")
   description        String?
-  isRecurring        Boolean             @default(false)
-  date               DateTime            @default(now())
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  isRecurring        Boolean  @default(false)
+  date               DateTime @default(now())
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   financialAccount FinancialAccount? @relation(fields: [financialAccountId], references: [id], onDelete: SetNull)
+  category         Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   @@index([userId])
-  @@index([userId, category])
+  @@index([userId, categoryId])
 }
 
-model SinkingFund {
+model Goal {
   id                  String    @id @default(cuid())
   userId              String
   name                String
   category            String
+  type                GoalType  @default(GENERAL)
   targetAmount        Float
+  // Manually-tracked progress for GENERAL goals. Ignored for the
+  // EMERGENCY_FUND goal, whose "current" is derived from the live sum of the
+  // user's FinancialAccount balances instead (see src/lib/finance.ts).
   currentAmount       Float     @default(0)
   monthlyContribution Float     @default(0)
   targetDate          DateTime?

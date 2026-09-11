@@ -10,7 +10,7 @@ export function MobileNav() {
 
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 border-t border-border bg-sidebar/95 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]">
-      <div className="grid grid-cols-4">
+      <div className="grid grid-cols-5">
         {navItems.map((item) => {
           const active = pathname === item.href;
           const Icon = item.icon;

@@ -1,10 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { convertCurrency } from "@/lib/currency";
-import { TransactionCategory } from "@prisma/client";
-
-export const EMERGENCY_FUND_TARGET_LKR = Number(
-  process.env.NEXT_PUBLIC_EMERGENCY_FUND_TARGET_LKR ?? 857_100
-);
+import { GoalType } from "@prisma/client";
 
 function startOfMonth(date = new Date()) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -18,18 +14,21 @@ export async function getDashboardData(userId: string) {
   const monthStart = startOfMonth();
   const monthEnd = endOfMonth();
 
-  const [financialAccounts, monthlyTransactions, sinkingFunds, debtTrackers] = await Promise.all([
-    prisma.financialAccount.findMany({ where: { userId } }),
-    prisma.transaction.findMany({
-      where: { userId, date: { gte: monthStart, lte: monthEnd } },
-      orderBy: { date: "desc" },
-    }),
-    prisma.sinkingFund.findMany({ where: { userId }, orderBy: { createdAt: "asc" } }),
-    prisma.debtTracker.findMany({ where: { userId }, orderBy: { expiryDate: "asc" } }),
-  ]);
+  const [financialAccounts, monthlyTransactions, categories, goals, debtTrackers] =
+    await Promise.all([
+      prisma.financialAccount.findMany({ where: { userId } }),
+      prisma.transaction.findMany({
+        where: { userId, date: { gte: monthStart, lte: monthEnd } },
+        include: { category: true },
+        orderBy: { date: "desc" },
+      }),
+      prisma.category.findMany({ where: { userId }, orderBy: { createdAt: "asc" } }),
+      prisma.goal.findMany({ where: { userId }, orderBy: { createdAt: "asc" } }),
+      prisma.debtTracker.findMany({ where: { userId }, orderBy: { expiryDate: "asc" } }),
+    ]);
 
-  const toLKR = (amount: number, currency: "USD" | "LKR") =>
-    convertCurrency(amount, currency, "LKR");
+  const toLKR = (amount: number, currency: string) =>
+    convertCurrency(amount, currency as "USD" | "LKR", "LKR");
 
   const liquidSavingsLKR = financialAccounts.reduce(
     (sum, acc) => sum + toLKR(acc.balance, acc.currency),
@@ -43,36 +42,35 @@ export async function getDashboardData(userId: string) {
 
   const netWorthLKR = liquidSavingsLKR - outstandingDebtLKR;
 
-  const monthlyGrossIncomeLKR = monthlyTransactions
-    .filter((t) => t.category === TransactionCategory.INCOME)
-    .reduce((sum, t) => sum + toLKR(t.amount, t.currency), 0);
+  const incomeTransactions = monthlyTransactions.filter((t) => t.category?.type === "INCOME");
+  const expenseTransactions = monthlyTransactions.filter((t) => t.category?.type !== "INCOME");
 
-  const expenseCategories: TransactionCategory[] = [
-    TransactionCategory.GROCERIES_BILLS,
-    TransactionCategory.CAMPUS_FEES,
-    TransactionCategory.DISCRETIONARY,
-    TransactionCategory.SINKING_FUND,
-    TransactionCategory.DEBT_PAYMENT,
-    TransactionCategory.OTHER,
-  ];
+  const monthlyGrossIncomeLKR = incomeTransactions.reduce(
+    (sum, t) => sum + toLKR(t.amount, t.currency),
+    0
+  );
 
-  const totalExpensesLKR = monthlyTransactions
-    .filter((t) => expenseCategories.includes(t.category))
-    .reduce((sum, t) => sum + toLKR(t.amount, t.currency), 0);
+  const totalExpensesLKR = expenseTransactions.reduce(
+    (sum, t) => sum + toLKR(t.amount, t.currency),
+    0
+  );
 
-  const expensesByCategory = expenseCategories.map((category) => ({
-    category,
-    amountLKR: monthlyTransactions
-      .filter((t) => t.category === category)
-      .reduce((sum, t) => sum + toLKR(t.amount, t.currency), 0),
-  }));
+  const expenseCategories = categories.filter((c) => c.type === "EXPENSE");
+  const expensesByCategory = expenseCategories.map((category) => {
+    const amountLKR = monthlyTransactions
+      .filter((t) => t.categoryId === category.id)
+      .reduce((sum, t) => sum + toLKR(t.amount, t.currency), 0);
+    return { category, amountLKR };
+  });
 
   const netCashflowSurplusLKR = monthlyGrossIncomeLKR - totalExpensesLKR;
 
-  const emergencyFundProgress = Math.min(
-    1,
-    liquidSavingsLKR / EMERGENCY_FUND_TARGET_LKR
-  );
+  const emergencyFundGoal = goals.find((g) => g.type === GoalType.EMERGENCY_FUND) ?? null;
+  const generalGoals = goals.filter((g) => g.type === GoalType.GENERAL);
+
+  const emergencyFundTargetLKR = emergencyFundGoal?.targetAmount ?? 0;
+  const emergencyFundProgress =
+    emergencyFundTargetLKR > 0 ? Math.min(1, liquidSavingsLKR / emergencyFundTargetLKR) : 0;
 
   return {
     netWorthLKR,
@@ -80,11 +78,13 @@ export async function getDashboardData(userId: string) {
     totalFixedExpensesLKR: totalExpensesLKR,
     netCashflowSurplusLKR,
     liquidSavingsLKR,
-    emergencyFundTargetLKR: EMERGENCY_FUND_TARGET_LKR,
+    emergencyFundGoal,
+    emergencyFundTargetLKR,
     emergencyFundProgress,
+    categories,
     expensesByCategory,
     monthlyTransactions,
-    sinkingFunds,
+    generalGoals,
     debtTrackers,
     financialAccounts,
   };

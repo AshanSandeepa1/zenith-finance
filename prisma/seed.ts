@@ -1,5 +1,6 @@
-import { PrismaClient, TransactionCategory, DebtStatus, Currency } from "@prisma/client";
+import { PrismaClient, DebtStatus, CategoryType, GoalType } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { DEFAULT_CATEGORIES } from "../src/lib/default-categories";
 
 const prisma = new PrismaClient();
 
@@ -14,14 +15,31 @@ async function main() {
       email,
       name: "Demo User",
       hashedPassword,
-      baseCurrency: Currency.USD,
+      baseCurrency: "USD",
     },
   });
 
   await prisma.financialAccount.deleteMany({ where: { userId: user.id } });
   await prisma.transaction.deleteMany({ where: { userId: user.id } });
-  await prisma.sinkingFund.deleteMany({ where: { userId: user.id } });
+  await prisma.goal.deleteMany({ where: { userId: user.id } });
   await prisma.debtTracker.deleteMany({ where: { userId: user.id } });
+  await prisma.category.deleteMany({ where: { userId: user.id } });
+
+  const categories = await Promise.all(
+    DEFAULT_CATEGORIES.map((c) =>
+      prisma.category.create({
+        data: {
+          userId: user.id,
+          name: c.name,
+          icon: c.icon,
+          color: c.color,
+          type: c.type as CategoryType,
+          isDefault: true,
+        },
+      })
+    )
+  );
+  const byName = (name: string) => categories.find((c) => c.name === name)!;
 
   const cashAccount = await prisma.financialAccount.create({
     data: {
@@ -29,7 +47,7 @@ async function main() {
       name: "Liquid Savings",
       type: "SAVINGS",
       balance: 220_000,
-      currency: Currency.LKR,
+      currency: "LKR",
     },
   });
 
@@ -41,45 +59,45 @@ async function main() {
       {
         userId: user.id,
         financialAccountId: cashAccount.id,
+        categoryId: byName("Income").id,
         amount: 870,
-        currency: Currency.USD,
-        category: TransactionCategory.INCOME,
+        currency: "USD",
         description: "Monthly gross income",
         isRecurring: true,
         date: monthStart,
       },
       {
         userId: user.id,
+        categoryId: byName("Groceries & Bills").id,
         amount: 45_000,
-        currency: Currency.LKR,
-        category: TransactionCategory.GROCERIES_BILLS,
+        currency: "LKR",
         description: "Groceries & utility bills",
         isRecurring: true,
         date: monthStart,
       },
       {
         userId: user.id,
+        categoryId: byName("Campus / Education").id,
         amount: 18_000,
-        currency: Currency.LKR,
-        category: TransactionCategory.CAMPUS_FEES,
+        currency: "LKR",
         description: "Campus fees",
         isRecurring: true,
         date: monthStart,
       },
       {
         userId: user.id,
+        categoryId: byName("Discretionary").id,
         amount: 22_000,
-        currency: Currency.LKR,
-        category: TransactionCategory.DISCRETIONARY,
+        currency: "LKR",
         description: "Discretionary spending",
         isRecurring: true,
         date: monthStart,
       },
       {
         userId: user.id,
+        categoryId: byName("Savings & Goals").id,
         amount: 15_000,
-        currency: Currency.LKR,
-        category: TransactionCategory.SINKING_FUND,
+        currency: "LKR",
         description: "Sinking fund contributions",
         isRecurring: true,
         date: monthStart,
@@ -87,12 +105,25 @@ async function main() {
     ],
   });
 
-  await prisma.sinkingFund.createMany({
+  await prisma.goal.create({
+    data: {
+      userId: user.id,
+      name: "Emergency Fund",
+      category: "Safety Net",
+      type: GoalType.EMERGENCY_FUND,
+      targetAmount: 857_100,
+      currentAmount: 0,
+      monthlyContribution: 0,
+    },
+  });
+
+  await prisma.goal.createMany({
     data: [
       {
         userId: user.id,
         name: "Call of Duty: Modern Warfare 4",
         category: "Gaming/Tech",
+        type: GoalType.GENERAL,
         targetAmount: 12_500,
         currentAmount: 4_500,
         monthlyContribution: 7_500,
@@ -102,6 +133,7 @@ async function main() {
         userId: user.id,
         name: "GTA 6",
         category: "Gaming/Tech",
+        type: GoalType.GENERAL,
         targetAmount: 15_000,
         currentAmount: 3_000,
         monthlyContribution: 7_500,

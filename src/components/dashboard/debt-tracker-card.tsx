@@ -1,10 +1,15 @@
 "use client";
 
+import { useTransition } from "react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { cn } from "@/lib/utils";
 import type { DebtTracker } from "@prisma/client";
-import { CreditCard } from "lucide-react";
+import { CreditCard, Trash2 } from "lucide-react";
+import { DebtDialog } from "@/components/dashboard/debt-dialog";
+import { deleteDebtTracker } from "@/app/actions/debts";
 
 const STATUS_CONFIG: Record<
   DebtTracker["status"],
@@ -20,24 +25,38 @@ const STATUS_CONFIG: Record<
 
 export function DebtTrackerCard({ debt }: { debt: DebtTracker }) {
   const { format } = useCurrency();
+  const [isPending, startTransition] = useTransition();
   const status = STATUS_CONFIG[debt.status];
   const outstanding = debt.monthlyInstallment * debt.remainingMonths;
+
+  function handleDelete() {
+    startTransition(async () => {
+      try {
+        await deleteDebtTracker(debt.id);
+        toast.success("Installment plan removed");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Something went wrong");
+      }
+    });
+  }
 
   return (
     <div className="glass-card rounded-2xl p-5 flex flex-col gap-3">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-muted-foreground shrink-0">
             <CreditCard className="h-4 w-4" />
           </div>
-          <div>
-            <p className="text-sm font-medium">{debt.itemName}</p>
-            <p className="text-xs text-muted-foreground">{debt.vendor}</p>
+          <div className="min-w-0">
+            <p className="text-sm font-medium truncate">{debt.itemName}</p>
+            <p className="text-xs text-muted-foreground truncate">{debt.vendor}</p>
           </div>
         </div>
-        <Badge variant="outline" className={cn("shrink-0", status.className)}>
-          {status.label}
-        </Badge>
+        <div className="flex items-center gap-1 shrink-0">
+          <Badge variant="outline" className={cn(status.className)}>
+            {status.label}
+          </Badge>
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-3 text-sm">
         <div>
@@ -49,10 +68,25 @@ export function DebtTrackerCard({ debt }: { debt: DebtTracker }) {
           <p className="font-medium tabular-nums">{format(outstanding, "LKR")}</p>
         </div>
       </div>
-      <p className="text-xs text-muted-foreground">
-        {debt.remainingMonths <= 1 ? "Final payment" : `${debt.remainingMonths} months left`} · expires{" "}
-        {debt.expiryDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-      </p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">
+          {debt.remainingMonths <= 1 ? "Final payment" : `${debt.remainingMonths} months left`} · expires{" "}
+          {debt.expiryDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+        </p>
+        <div className="flex items-center gap-1 shrink-0">
+          <DebtDialog debt={debt} />
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Delete ${debt.itemName}`}
+            disabled={isPending}
+            onClick={handleDelete}
+            className="text-muted-foreground hover:text-rose-400"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

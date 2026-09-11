@@ -57,3 +57,37 @@ export async function updateDebtRemainingMonths(id: string, remainingMonths: num
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/expenses");
 }
+
+export async function updateDebtTracker(id: string, input: z.infer<typeof createDebtSchema>) {
+  const session = await auth();
+  if (!session?.user) throw new Error("Unauthorized");
+
+  const debt = await prisma.debtTracker.findUnique({ where: { id } });
+  if (!debt || debt.userId !== session.user.id) throw new Error("Not found");
+
+  const parsed = createDebtSchema.parse(input);
+
+  await prisma.debtTracker.update({
+    where: { id },
+    data: {
+      ...parsed,
+      status: statusFromRemainingMonths(parsed.remainingMonths),
+    },
+  });
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/expenses");
+}
+
+export async function deleteDebtTracker(id: string) {
+  const session = await auth();
+  if (!session?.user) throw new Error("Unauthorized");
+
+  const debt = await prisma.debtTracker.findUnique({ where: { id } });
+  if (!debt || debt.userId !== session.user.id) throw new Error("Not found");
+
+  await prisma.debtTracker.delete({ where: { id } });
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/expenses");
+}

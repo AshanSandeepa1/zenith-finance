@@ -5,6 +5,7 @@ import { KpiCard } from "@/components/dashboard/kpi-card";
 import { CashflowSankey } from "@/components/dashboard/cashflow-sankey";
 import { EmergencyFundGauge } from "@/components/dashboard/emergency-gauge";
 import { DebtTrackerCard } from "@/components/dashboard/debt-tracker-card";
+import { TransactionDialog } from "@/components/dashboard/transaction-dialog";
 
 export default async function DashboardOverviewPage() {
   const session = await auth();
@@ -14,9 +15,12 @@ export default async function DashboardOverviewPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-semibold">Overview</h1>
-        <p className="text-sm text-muted-foreground">Your net worth and cash flow at a glance</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold">Overview</h1>
+          <p className="text-sm text-muted-foreground">Your net worth and cash flow at a glance</p>
+        </div>
+        <TransactionDialog categories={data.categories} accounts={data.financialAccounts} />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
