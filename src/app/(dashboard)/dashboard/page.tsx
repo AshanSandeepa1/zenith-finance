@@ -1,15 +1,27 @@
 import { Wallet, TrendingUp, Receipt, PiggyBank, Landmark } from "lucide-react";
 import { auth } from "@/auth";
 import { getDashboardData } from "@/lib/finance";
+import { recordHealthScoreSnapshot, getHealthScoreHistory } from "@/lib/health-score";
+import { generateInsights } from "@/lib/insights";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { CashflowSankey } from "@/components/dashboard/cashflow-sankey";
 import { EmergencyFundGauge } from "@/components/dashboard/emergency-gauge";
 import { DebtTrackerCard } from "@/components/dashboard/debt-tracker-card";
 import { TransactionDialog } from "@/components/dashboard/transaction-dialog";
+import { HealthScoreCard } from "@/components/dashboard/health-score-card";
+import { InsightsFeed } from "@/components/dashboard/insights-feed";
+import { OverspendBanner } from "@/components/dashboard/overspend-banner";
 
 export default async function DashboardOverviewPage() {
   const session = await auth();
-  const data = await getDashboardData(session!.user.id);
+  const userId = session!.user.id;
+  const data = await getDashboardData(userId);
+
+  await recordHealthScoreSnapshot(userId, data.healthScore.score);
+  const [healthHistory, insights] = await Promise.all([
+    getHealthScoreHistory(userId),
+    generateInsights(userId),
+  ]);
 
   const expiringDebts = data.debtTrackers.filter((d) => d.status === "EXPIRING_THIS_MONTH");
 
@@ -22,6 +34,8 @@ export default async function DashboardOverviewPage() {
         </div>
         <TransactionDialog categories={data.categories} accounts={data.financialAccounts} />
       </div>
+
+      <OverspendBanner overBudgetCategories={data.overBudgetCategories} />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <KpiCard
@@ -54,6 +68,17 @@ export default async function DashboardOverviewPage() {
           icon={<Wallet className="h-4 w-4" />}
           tone="neutral"
         />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <HealthScoreCard
+          score={data.healthScore.score}
+          breakdown={data.healthScore.breakdown}
+          history={healthHistory}
+        />
+        <div className="lg:col-span-2">
+          <InsightsFeed insights={insights} />
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">

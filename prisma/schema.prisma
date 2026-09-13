@@ -30,13 +30,14 @@ model User {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  accounts          Account[]
-  sessions          Session[]
-  financialAccounts FinancialAccount[]
-  transactions      Transaction[]
-  categories        Category[]
-  goals             Goal[]
-  debtTrackers      DebtTracker[]
+  accounts             Account[]
+  sessions             Session[]
+  financialAccounts    FinancialAccount[]
+  transactions         Transaction[]
+  categories           Category[]
+  goals                Goal[]
+  debtTrackers         DebtTracker[]
+  healthScoreSnapshots HealthScoreSnapshot[]
 }
 
 model Account {
@@ -203,4 +204,21 @@ model ExchangeRate {
   fetchedAt DateTime @default(now())
 
   @@unique([base, target])
+}
+
+// One row per user per calendar month, upserted opportunistically whenever
+// the Overview page computes a fresh Financial Health Score — lets the score
+// build a trend line over time without a separate backfill/migration later.
+model HealthScoreSnapshot {
+  id        String   @id @default(cuid())
+  userId    String
+  yearMonth String // "2026-09"
+  score     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, yearMonth])
+  @@index([userId])
 }

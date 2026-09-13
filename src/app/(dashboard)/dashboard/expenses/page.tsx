@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { History } from "lucide-react";
+import { History, Calendar } from "lucide-react";
 import { auth } from "@/auth";
 import { getDashboardData } from "@/lib/finance";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,15 @@ export default async function ExpensesPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            render={<Link href="/dashboard/expenses/calendar" />}
+            nativeButton={false}
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+          >
+            <Calendar className="h-3.5 w-3.5" /> Calendar
+          </Button>
           <Button
             render={<Link href="/dashboard/expenses/history" />}
             nativeButton={false}

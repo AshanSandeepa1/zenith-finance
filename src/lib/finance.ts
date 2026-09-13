@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { convertCurrency } from "@/lib/currency";
 import { GoalType } from "@prisma/client";
+import { computeHealthScore } from "@/lib/health-score";
 
 function startOfMonth(date = new Date()) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -72,6 +73,23 @@ export async function getDashboardData(userId: string) {
   const emergencyFundProgress =
     emergencyFundTargetLKR > 0 ? Math.min(1, liquidSavingsLKR / emergencyFundTargetLKR) : 0;
 
+  const totalMonthlyDebtLKR = debtTrackers
+    .filter((d) => d.remainingMonths > 0)
+    .reduce((sum, d) => sum + d.monthlyInstallment, 0);
+
+  const healthScore = computeHealthScore({
+    monthlyGrossIncomeLKR,
+    netCashflowSurplusLKR,
+    liquidSavingsLKR,
+    emergencyFundTargetLKR,
+    totalMonthlyDebtLKR,
+    generalGoalProgress: generalGoals.map((g) => g.currentAmount / g.targetAmount),
+  });
+
+  const overBudgetCategories = expensesByCategory.filter(
+    (e) => e.category.budgetMonthly != null && e.amountLKR > e.category.budgetMonthly
+  );
+
   return {
     netWorthLKR,
     monthlyGrossIncomeLKR,
@@ -81,6 +99,9 @@ export async function getDashboardData(userId: string) {
     emergencyFundGoal,
     emergencyFundTargetLKR,
     emergencyFundProgress,
+    totalMonthlyDebtLKR,
+    healthScore,
+    overBudgetCategories,
     categories,
     expensesByCategory,
     monthlyTransactions,
