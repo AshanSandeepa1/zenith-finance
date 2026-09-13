@@ -1,5 +1,8 @@
+import Link from "next/link";
+import { History } from "lucide-react";
 import { auth } from "@/auth";
 import { getDashboardData } from "@/lib/finance";
+import { Button } from "@/components/ui/button";
 import { DebtTrackerCard } from "@/components/dashboard/debt-tracker-card";
 import { ExpenseCategoryList } from "@/components/dashboard/expense-category-list";
 import { TransactionDialog } from "@/components/dashboard/transaction-dialog";
@@ -18,7 +21,18 @@ export default async function ExpensesPage() {
             Active outflows this month and upcoming installment plan roll-offs
           </p>
         </div>
-        <TransactionDialog categories={data.categories} accounts={data.financialAccounts} />
+        <div className="flex items-center gap-2">
+          <Button
+            render={<Link href="/dashboard/expenses/history" />}
+            nativeButton={false}
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+          >
+            <History className="h-3.5 w-3.5" /> History
+          </Button>
+          <TransactionDialog categories={data.categories} accounts={data.financialAccounts} />
+        </div>
       </div>
 
       <ExpenseCategoryList expensesByCategory={data.expensesByCategory} />

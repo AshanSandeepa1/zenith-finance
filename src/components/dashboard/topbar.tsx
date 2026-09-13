@@ -16,10 +16,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { ThemeToggle } from "@/components/dashboard/theme-toggle";
+import { relativeTimeFromNow } from "@/lib/relative-time";
 
 export function TopBar() {
   const { data: session } = useSession();
-  const { displayCurrency, toggleCurrency, rate } = useCurrency();
+  const { displayCurrency, toggleCurrency, rate, rateFetchedAt } = useCurrency();
 
   const initials = session?.user?.name
     ?.split(" ")
@@ -30,9 +31,14 @@ export function TopBar() {
 
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b border-border bg-background/80 backdrop-blur-xl px-4 md:px-6">
-      <div>
+      <div className="hidden sm:block">
         <p className="text-sm text-muted-foreground">
           USD/LKR spot <span className="text-foreground font-medium tabular-nums">{rate.toFixed(2)}</span>
+          {rateFetchedAt && (
+            <span className="ml-1.5 text-xs text-muted-foreground/70">
+              · updated {relativeTimeFromNow(rateFetchedAt)}
+            </span>
+          )}
         </p>
       </div>
 

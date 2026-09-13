@@ -190,3 +190,17 @@ model DebtTracker {
 
   @@index([userId])
 }
+
+// Shared (not per-user) cache of fetched FX rates, refreshed on read when
+// stale — see src/lib/fx.ts. Avoids hitting the free rate-limited public API
+// on every page load and gives every currency conversion a fallback if it's
+// ever unreachable.
+model ExchangeRate {
+  id        String   @id @default(cuid())
+  base      String
+  target    String
+  rate      Float
+  fetchedAt DateTime @default(now())
+
+  @@unique([base, target])
+}

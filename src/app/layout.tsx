@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { SessionProvider } from "@/components/providers/session-provider";
 import { CurrencyProvider } from "@/components/providers/currency-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
+import { getUsdToLkrRate } from "@/lib/fx";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -21,7 +22,9 @@ export const metadata: Metadata = {
   description: "Personal finance & net worth tracking dashboard",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const { rate, fetchedAt } = await getUsdToLkrRate();
+
   return (
     <html
       lang="en"
@@ -31,7 +34,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <SessionProvider>
-            <CurrencyProvider>{children}</CurrencyProvider>
+            <CurrencyProvider initialRate={rate} initialRateFetchedAt={fetchedAt.toISOString()}>
+              {children}
+            </CurrencyProvider>
           </SessionProvider>
           <Toaster richColors />
         </ThemeProvider>
