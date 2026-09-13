@@ -1,10 +1,21 @@
 "use client";
 
-import { useSession } from "next-auth/react";
-import { ArrowLeftRight } from "lucide-react";
+import Link from "next/link";
+import { useSession, signOut } from "next-auth/react";
+import { ArrowLeftRight, Settings, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { useCurrency } from "@/components/providers/currency-provider";
+import { ThemeToggle } from "@/components/dashboard/theme-toggle";
 
 export function TopBar() {
   const { data: session } = useSession();
@@ -25,7 +36,7 @@ export function TopBar() {
         </p>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <Button
           variant="outline"
           size="sm"
@@ -36,11 +47,39 @@ export function TopBar() {
           <span className="tabular-nums">{displayCurrency}</span>
         </Button>
 
-        <Avatar className="h-9 w-9 border border-border">
-          <AvatarFallback className="bg-indigo-500/20 text-indigo-400 text-xs font-semibold">
-            {initials || "ZF"}
-          </AvatarFallback>
-        </Avatar>
+        <ThemeToggle />
+
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={<button aria-label="Account menu" className="rounded-full" />}
+          >
+            <Avatar className="h-9 w-9 border border-border">
+              <AvatarFallback className="bg-indigo-500/20 text-indigo-400 text-xs font-semibold">
+                {initials || "ZF"}
+              </AvatarFallback>
+            </Avatar>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="truncate">
+                {session?.user?.name ?? session?.user?.email ?? "Account"}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem render={<Link href="/dashboard/settings" />}>
+                <Settings className="h-4 w-4" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => signOut({ callbackUrl: "/login" })}
+              >
+                <LogOut className="h-4 w-4" />
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

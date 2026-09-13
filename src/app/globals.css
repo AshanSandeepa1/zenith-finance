@@ -48,8 +48,48 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-:root,
+:root {
+  color-scheme: light;
+  --background: #eef0f8;
+  --foreground: #1b2030;
+  --card: rgba(255, 255, 255, 0.55);
+  --card-foreground: #1b2030;
+  --popover: rgba(255, 255, 255, 0.92);
+  --popover-foreground: #1b2030;
+  --primary: #6366f1;
+  --primary-foreground: #ffffff;
+  --secondary: #e4e7f2;
+  --secondary-foreground: #1b2030;
+  --muted: #e7e9f3;
+  --muted-foreground: #5c6480;
+  --accent: #e4e7f2;
+  --accent-foreground: #1b2030;
+  --destructive: #f43f5e;
+  --destructive-foreground: #ffffff;
+  --border: rgba(27, 32, 48, 0.09);
+  --input: rgba(255, 255, 255, 0.7);
+  --ring: #6366f1;
+  --chart-1: #6366f1;
+  --chart-2: #10b981;
+  --chart-3: #f43f5e;
+  --chart-4: #0ea5e9;
+  --chart-5: #8b5cf6;
+  --radius: 0.875rem;
+  --sidebar: rgba(255, 255, 255, 0.6);
+  --sidebar-foreground: #1b2030;
+  --sidebar-primary: #6366f1;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e4e7f2;
+  --sidebar-accent-foreground: #1b2030;
+  --sidebar-border: rgba(27, 32, 48, 0.09);
+  --sidebar-ring: #6366f1;
+  --glass-highlight: rgba(255, 255, 255, 0.8);
+  --glass-shadow: rgba(30, 41, 59, 0.12);
+  --glass-sheen: rgba(255, 255, 255, 0.35);
+}
+
 .dark {
+  color-scheme: dark;
   --background: #090d16;
   --foreground: #e2e8f0;
   --card: rgba(30, 41, 59, 0.35);
@@ -83,6 +123,9 @@
   --sidebar-accent-foreground: #e2e8f0;
   --sidebar-border: #1e293b;
   --sidebar-ring: #6366f1;
+  --glass-highlight: rgba(255, 255, 255, 0.07);
+  --glass-shadow: rgba(0, 0, 0, 0.45);
+  --glass-sheen: rgba(255, 255, 255, 0.04);
 }
 
 @layer base {
@@ -91,23 +134,31 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-image: radial-gradient(circle at 15% 0%, rgba(99, 102, 241, 0.1), transparent 45%),
+      radial-gradient(circle at 85% 10%, rgba(16, 185, 129, 0.08), transparent 40%);
+    background-attachment: fixed;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+  .dark body {
     background-image: radial-gradient(
         circle at 15% 0%,
         rgba(99, 102, 241, 0.12),
         transparent 40%
       ),
       radial-gradient(circle at 85% 0%, rgba(16, 185, 129, 0.08), transparent 40%);
-    background-attachment: fixed;
   }
   html {
     @apply font-sans;
-    color-scheme: dark;
   }
 }
 
 @layer utilities {
   .glass-card {
-    @apply bg-card border border-border backdrop-blur-xl;
+    @apply bg-card border border-border backdrop-blur-2xl backdrop-saturate-150;
+    box-shadow:
+      inset 0 1px 0 0 var(--glass-highlight),
+      inset 0 0 0 1px var(--glass-sheen),
+      0 12px 32px -16px var(--glass-shadow);
   }
   .tabular-nums {
     font-variant-numeric: tabular-nums;

@@ -57,10 +57,10 @@ export function CashflowSankey({ expensesByCategory, netCashflowSurplusLKR }: Pr
             <Tooltip
               formatter={(value) => format(Number(value), "LKR")}
               contentStyle={{
-                background: "#0d1420",
-                border: "1px solid #1e293b",
+                background: "var(--popover)",
+                border: "1px solid var(--border)",
                 borderRadius: 8,
-                color: "#e2e8f0",
+                color: "var(--popover-foreground)",
                 fontSize: 12,
               }}
             />
@@ -92,7 +92,7 @@ function SankeyNode(props: {
         textAnchor={isRight ? "end" : "start"}
         dominantBaseline="middle"
         fontSize={12}
-        fill="#e2e8f0"
+        fill="var(--foreground)"
       >
         {payload.name}
       </text>

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { SessionProvider } from "@/components/providers/session-provider";
 import { CurrencyProvider } from "@/components/providers/currency-provider";
+import { ThemeProvider } from "@/components/providers/theme-provider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -24,13 +25,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`dark ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
-        <SessionProvider>
-          <CurrencyProvider>{children}</CurrencyProvider>
-        </SessionProvider>
-        <Toaster theme="dark" richColors />
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+          <SessionProvider>
+            <CurrencyProvider>{children}</CurrencyProvider>
+          </SessionProvider>
+          <Toaster richColors />
+        </ThemeProvider>
       </body>
     </html>
   );

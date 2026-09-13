@@ -89,10 +89,16 @@ export function WhatIfForecast({
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
-              <CartesianGrid stroke="#1e293b" strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="month" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+              <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+              <XAxis
+                dataKey="month"
+                stroke="var(--muted-foreground)"
+                fontSize={12}
+                tickLine={false}
+                axisLine={false}
+              />
               <YAxis
-                stroke="#94a3b8"
+                stroke="var(--muted-foreground)"
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
@@ -102,14 +108,14 @@ export function WhatIfForecast({
               <Tooltip
                 formatter={(value) => format(Number(value), "LKR")}
                 contentStyle={{
-                  background: "#0d1420",
-                  border: "1px solid #1e293b",
+                  background: "var(--popover)",
+                  border: "1px solid var(--border)",
                   borderRadius: 8,
-                  color: "#e2e8f0",
+                  color: "var(--popover-foreground)",
                   fontSize: 12,
                 }}
               />
-              <Legend wrapperStyle={{ fontSize: 12, color: "#94a3b8" }} />
+              <Legend wrapperStyle={{ fontSize: 12, color: "var(--muted-foreground)" }} />
               <Line
                 type="monotone"
                 dataKey="baseline"
