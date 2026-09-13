@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { Wallet, TrendingUp, Receipt, PiggyBank, Landmark } from "lucide-react";
 import { auth } from "@/auth";
 import { getDashboardData } from "@/lib/finance";
@@ -15,13 +16,18 @@ import { OverspendBanner } from "@/components/dashboard/overspend-banner";
 export default async function DashboardOverviewPage() {
   const session = await auth();
   const userId = session!.user.id;
-  const data = await getDashboardData(userId);
 
-  await recordHealthScoreSnapshot(userId, data.healthScore.score);
-  const [healthHistory, insights] = await Promise.all([
+  // All three independent of each other — run concurrently instead of in
+  // sequence, since each is its own round trip to a remote database.
+  const [data, healthHistory, insights] = await Promise.all([
+    getDashboardData(userId),
     getHealthScoreHistory(userId),
     generateInsights(userId),
   ]);
+
+  // Not needed to render the page — runs after the response is sent instead
+  // of blocking it.
+  after(() => recordHealthScoreSnapshot(userId, data.healthScore.score));
 
   const expiringDebts = data.debtTrackers.filter((d) => d.status === "EXPIRING_THIS_MONTH");
 
