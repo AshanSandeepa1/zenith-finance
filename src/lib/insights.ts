@@ -1,11 +1,17 @@
 import { prisma } from "@/lib/prisma";
 import { convertCurrency } from "@/lib/currency";
+import { getUsdToLkrRate } from "@/lib/fx";
 import { GoalType, DebtStatus } from "@prisma/client";
 
 export type Insight = {
   id: string;
   tone: "positive" | "warning" | "neutral";
+  // May contain the literal token "{amount}" as a placeholder — the
+  // (client-side) feed component substitutes it with amountLKR formatted in
+  // the viewer's chosen display currency, since this module has no access
+  // to that preference.
   text: string;
+  amountLKR?: number;
 };
 
 function monthKey(date: Date) {
@@ -20,17 +26,18 @@ export async function generateInsights(userId: string): Promise<Insight[]> {
   const now = new Date();
   const rangeStart = new Date(now.getFullYear(), now.getMonth() - 3, 1);
 
-  const [transactions, goals, debts] = await Promise.all([
+  const [transactions, goals, debts, usdToLkr] = await Promise.all([
     prisma.transaction.findMany({
       where: { userId, date: { gte: rangeStart } },
       include: { category: true },
     }),
     prisma.goal.findMany({ where: { userId, type: GoalType.GENERAL } }),
     prisma.debtTracker.findMany({ where: { userId } }),
+    getUsdToLkrRate(),
   ]);
 
   const toLKR = (amount: number, currency: string) =>
-    convertCurrency(amount, currency as "USD" | "LKR", "LKR");
+    currency === "USD" ? convertCurrency(amount, "USD", "LKR", usdToLkr.rate) : amount;
 
   const thisMonthKey = monthKey(now);
   const lastMonthKey = monthKey(new Date(now.getFullYear(), now.getMonth() - 1, 1));
@@ -120,7 +127,8 @@ export async function generateInsights(userId: string): Promise<Insight[]> {
       insights.push({
         id: `debt-${debt.id}`,
         tone: "positive",
-        text: `${debt.itemName} clears this month, freeing up ${debt.monthlyInstallment.toLocaleString()} LKR/month.`,
+        text: `${debt.itemName} clears this month, freeing up {amount}/month.`,
+        amountLKR: debt.monthlyInstallment,
       });
     }
   }

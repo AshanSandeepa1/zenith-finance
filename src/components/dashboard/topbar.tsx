@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { ArrowLeftRight, Settings, LogOut } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Settings, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { SelectNative } from "@/components/ui/select-native";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -17,10 +17,12 @@ import {
 import { useCurrency } from "@/components/providers/currency-provider";
 import { ThemeToggle } from "@/components/dashboard/theme-toggle";
 import { relativeTimeFromNow } from "@/lib/relative-time";
+import { CURRENCIES } from "@/lib/currencies";
 
 export function TopBar() {
   const { data: session } = useSession();
-  const { displayCurrency, toggleCurrency, rate, rateFetchedAt } = useCurrency();
+  const { displayCurrency, setDisplayCurrency, isChangingCurrency, usdToLkrRate, usdToLkrFetchedAt } =
+    useCurrency();
 
   const initials = session?.user?.name
     ?.split(" ")
@@ -33,25 +35,30 @@ export function TopBar() {
     <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b border-border bg-background/80 backdrop-blur-xl px-4 md:px-6">
       <div className="hidden sm:block">
         <p className="text-sm text-muted-foreground">
-          USD/LKR spot <span className="text-foreground font-medium tabular-nums">{rate.toFixed(2)}</span>
-          {rateFetchedAt && (
+          USD/LKR spot{" "}
+          <span className="text-foreground font-medium tabular-nums">{usdToLkrRate.toFixed(2)}</span>
+          {usdToLkrFetchedAt && (
             <span className="ml-1.5 text-xs text-muted-foreground/70">
-              · updated {relativeTimeFromNow(rateFetchedAt)}
+              · updated {relativeTimeFromNow(usdToLkrFetchedAt)}
             </span>
           )}
         </p>
       </div>
 
       <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={toggleCurrency}
-          className="gap-2 border-indigo-500/30 hover:bg-indigo-500/10 hover:text-indigo-400"
+        <SelectNative
+          aria-label="Display currency"
+          className="w-[4.75rem]"
+          value={displayCurrency}
+          disabled={isChangingCurrency}
+          onChange={(e) => setDisplayCurrency(e.target.value)}
         >
-          <ArrowLeftRight className="h-3.5 w-3.5" />
-          <span className="tabular-nums">{displayCurrency}</span>
-        </Button>
+          {CURRENCIES.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.code}
+            </option>
+          ))}
+        </SelectNative>
 
         <ThemeToggle />
 

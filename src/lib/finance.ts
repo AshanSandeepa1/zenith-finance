@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { convertCurrency } from "@/lib/currency";
+import { getUsdToLkrRate } from "@/lib/fx";
 import { GoalType } from "@prisma/client";
 import { computeHealthScore } from "@/lib/health-score";
 
@@ -15,7 +16,7 @@ export async function getDashboardData(userId: string) {
   const monthStart = startOfMonth();
   const monthEnd = endOfMonth();
 
-  const [financialAccounts, monthlyTransactions, categories, goals, debtTrackers] =
+  const [financialAccounts, monthlyTransactions, categories, goals, debtTrackers, usdToLkr] =
     await Promise.all([
       prisma.financialAccount.findMany({ where: { userId } }),
       prisma.transaction.findMany({
@@ -26,10 +27,11 @@ export async function getDashboardData(userId: string) {
       prisma.category.findMany({ where: { userId }, orderBy: { createdAt: "asc" } }),
       prisma.goal.findMany({ where: { userId }, orderBy: { createdAt: "asc" } }),
       prisma.debtTracker.findMany({ where: { userId }, orderBy: { expiryDate: "asc" } }),
+      getUsdToLkrRate(),
     ]);
 
   const toLKR = (amount: number, currency: string) =>
-    convertCurrency(amount, currency as "USD" | "LKR", "LKR");
+    currency === "USD" ? convertCurrency(amount, "USD", "LKR", usdToLkr.rate) : amount;
 
   const liquidSavingsLKR = financialAccounts.reduce(
     (sum, acc) => sum + toLKR(acc.balance, acc.currency),

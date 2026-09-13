@@ -49,7 +49,7 @@ export function AccountsManager({ accounts }: { accounts: FinancialAccount[] }) 
               </p>
             </div>
             <p className="text-sm font-medium tabular-nums shrink-0">
-              {format(account.balance, account.currency as "USD" | "LKR")}
+              {format(account.balance, account.currency)}
             </p>
             <div className="flex items-center gap-1 shrink-0">
               <AccountDialog account={account} />

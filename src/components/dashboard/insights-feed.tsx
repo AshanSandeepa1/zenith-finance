@@ -1,5 +1,8 @@
+"use client";
+
 import { TrendingUp, TrendingDown, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCurrency } from "@/components/providers/currency-provider";
 import type { Insight } from "@/lib/insights";
 
 const TONE_STYLES: Record<Insight["tone"], { icon: typeof TrendingUp; className: string }> = {
@@ -9,6 +12,8 @@ const TONE_STYLES: Record<Insight["tone"], { icon: typeof TrendingUp; className:
 };
 
 export function InsightsFeed({ insights }: { insights: Insight[] }) {
+  const { format } = useCurrency();
+
   if (insights.length === 0) {
     return (
       <div className="glass-card rounded-2xl p-5">
@@ -27,6 +32,10 @@ export function InsightsFeed({ insights }: { insights: Insight[] }) {
         {insights.map((insight) => {
           const tone = TONE_STYLES[insight.tone];
           const Icon = tone.icon;
+          const text =
+            insight.amountLKR != null
+              ? insight.text.replace("{amount}", format(insight.amountLKR, "LKR"))
+              : insight.text;
           return (
             <div key={insight.id} className="flex items-start gap-3">
               <div
@@ -37,7 +46,7 @@ export function InsightsFeed({ insights }: { insights: Insight[] }) {
               >
                 <Icon className="h-3.5 w-3.5" />
               </div>
-              <p className="text-sm text-muted-foreground leading-snug">{insight.text}</p>
+              <p className="text-sm text-muted-foreground leading-snug">{text}</p>
             </div>
           );
         })}

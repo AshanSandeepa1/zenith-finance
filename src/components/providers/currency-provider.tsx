@@ -1,15 +1,17 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, useMemo } from "react";
+import { createContext, useContext, useCallback, useMemo, useTransition } from "react";
+import { toast } from "sonner";
 import type { CurrencyCode } from "@/lib/currency";
-import { convertCurrency, formatCurrency, USD_LKR_RATE } from "@/lib/currency";
+import { convertCurrency, formatCurrency } from "@/lib/currency";
+import { updateBaseCurrency } from "@/app/actions/settings";
 
 type CurrencyContextValue = {
   displayCurrency: CurrencyCode;
-  toggleCurrency: () => void;
   setDisplayCurrency: (currency: CurrencyCode) => void;
-  rate: number;
-  rateFetchedAt: Date | null;
+  isChangingCurrency: boolean;
+  usdToLkrRate: number;
+  usdToLkrFetchedAt: Date | null;
   convert: (amount: number, from: CurrencyCode) => number;
   format: (amount: number, from: CurrencyCode) => string;
 };
@@ -18,50 +20,85 @@ const CurrencyContext = createContext<CurrencyContextValue | null>(null);
 
 export function CurrencyProvider({
   children,
-  initialRate,
-  initialRateFetchedAt,
+  initialDisplayCurrency,
+  usdToLkrRate,
+  usdToLkrFetchedAt,
+  lkrToDisplayRate,
 }: {
   children: React.ReactNode;
-  // Passed from the root layout (a Server Component), which resolves the
-  // live/cached USD->LKR rate via src/lib/fx.ts before first paint — falls
-  // back to the static constant only if that prop is never supplied (e.g. in
-  // isolated component usage).
-  initialRate?: number;
-  initialRateFetchedAt?: string | null;
+  // All resolved server-side (src/app/(dashboard)/layout.tsx) from the
+  // signed-in user's baseCurrency and live/cached FX data — see
+  // src/lib/fx.ts.
+  initialDisplayCurrency: string;
+  usdToLkrRate: number;
+  usdToLkrFetchedAt: string | null;
+  lkrToDisplayRate: number;
 }) {
-  const [displayCurrency, setDisplayCurrency] = useState<CurrencyCode>("LKR");
-  const rate = initialRate ?? USD_LKR_RATE;
-  const rateFetchedAt = useMemo(
-    () => (initialRateFetchedAt ? new Date(initialRateFetchedAt) : null),
-    [initialRateFetchedAt]
+  const [isChangingCurrency, startTransition] = useTransition();
+
+  const usdToLkrFetchedAtDate = useMemo(
+    () => (usdToLkrFetchedAt ? new Date(usdToLkrFetchedAt) : null),
+    [usdToLkrFetchedAt]
   );
 
-  const toggleCurrency = useCallback(() => {
-    setDisplayCurrency((prev) => (prev === "USD" ? "LKR" : "USD"));
+  // Changing currency needs a fresh LKR->newCurrency rate, which only the
+  // server has. router.refresh() + clearing an optimistic value raced with
+  // the new props landing (the UI would flash back to the old currency) —
+  // a full reload after the write confirms is slower but unambiguous.
+  const setDisplayCurrency = useCallback((currency: string) => {
+    startTransition(async () => {
+      try {
+        await updateBaseCurrency(currency);
+        window.location.reload();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Couldn't change currency");
+      }
+    });
   }, []);
 
+  const toLKR = useCallback(
+    (amount: number, from: string) => {
+      if (from === "LKR") return amount;
+      if (from === "USD") return convertCurrency(amount, "USD", "LKR", usdToLkrRate);
+      return amount;
+    },
+    [usdToLkrRate]
+  );
+
   const convert = useCallback(
-    (amount: number, from: CurrencyCode) => convertCurrency(amount, from, displayCurrency, rate),
-    [displayCurrency, rate]
+    (amount: number, from: string) => {
+      const lkrAmount = toLKR(amount, from);
+      return initialDisplayCurrency === "LKR"
+        ? lkrAmount
+        : convertCurrency(lkrAmount, "LKR", initialDisplayCurrency, lkrToDisplayRate);
+    },
+    [toLKR, initialDisplayCurrency, lkrToDisplayRate]
   );
 
   const format = useCallback(
-    (amount: number, from: CurrencyCode) =>
-      formatCurrency(convertCurrency(amount, from, displayCurrency, rate), displayCurrency),
-    [displayCurrency, rate]
+    (amount: number, from: string) => formatCurrency(convert(amount, from), initialDisplayCurrency),
+    [convert, initialDisplayCurrency]
   );
 
   const value = useMemo(
     () => ({
-      displayCurrency,
-      toggleCurrency,
+      displayCurrency: initialDisplayCurrency,
       setDisplayCurrency,
-      rate,
-      rateFetchedAt,
+      isChangingCurrency,
+      usdToLkrRate,
+      usdToLkrFetchedAt: usdToLkrFetchedAtDate,
       convert,
       format,
     }),
-    [displayCurrency, toggleCurrency, rate, rateFetchedAt, convert, format]
+    [
+      initialDisplayCurrency,
+      setDisplayCurrency,
+      isChangingCurrency,
+      usdToLkrRate,
+      usdToLkrFetchedAtDate,
+      convert,
+      format,
+    ]
   );
 
   return <CurrencyContext.Provider value={value}>{children}</CurrencyContext.Provider>;

@@ -79,7 +79,7 @@ export function TransactionHistoryTable({
                     {t.description || "—"}
                   </td>
                   <td className="px-5 py-3 text-right tabular-nums font-medium">
-                    {format(t.amount, t.currency as "USD" | "LKR")}
+                    {format(t.amount, t.currency)}
                   </td>
                   <td className="px-5 py-3">
                     <div className="flex items-center justify-end gap-1">
