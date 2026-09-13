@@ -10,7 +10,9 @@ type CurrencyContextValue = {
   displayCurrency: CurrencyCode;
   setDisplayCurrency: (currency: CurrencyCode) => void;
   isChangingCurrency: boolean;
-  usdToLkrRate: number;
+  // USD -> displayCurrency, i.e. the "USD/<displayCurrency> spot" figure —
+  // USD is treated as the anchor currency it's always quoted against.
+  usdToDisplayRate: number;
   usdToLkrFetchedAt: Date | null;
   convert: (amount: number, from: CurrencyCode) => number;
   format: (amount: number, from: CurrencyCode) => string;
@@ -80,12 +82,21 @@ export function CurrencyProvider({
     [convert, initialDisplayCurrency]
   );
 
+  // Derived from the two rates we already fetch — no extra FX call needed:
+  // 1 USD = usdToLkrRate LKR = usdToLkrRate * lkrToDisplayRate in the
+  // selected display currency.
+  const usdToDisplayRate = useMemo(() => {
+    if (initialDisplayCurrency === "USD") return 1;
+    if (initialDisplayCurrency === "LKR") return usdToLkrRate;
+    return usdToLkrRate * lkrToDisplayRate;
+  }, [initialDisplayCurrency, usdToLkrRate, lkrToDisplayRate]);
+
   const value = useMemo(
     () => ({
       displayCurrency: initialDisplayCurrency,
       setDisplayCurrency,
       isChangingCurrency,
-      usdToLkrRate,
+      usdToDisplayRate,
       usdToLkrFetchedAt: usdToLkrFetchedAtDate,
       convert,
       format,
@@ -94,7 +105,7 @@ export function CurrencyProvider({
       initialDisplayCurrency,
       setDisplayCurrency,
       isChangingCurrency,
-      usdToLkrRate,
+      usdToDisplayRate,
       usdToLkrFetchedAtDate,
       convert,
       format,

@@ -21,7 +21,7 @@ import { CURRENCIES } from "@/lib/currencies";
 
 export function TopBar() {
   const { data: session } = useSession();
-  const { displayCurrency, setDisplayCurrency, isChangingCurrency, usdToLkrRate, usdToLkrFetchedAt } =
+  const { displayCurrency, setDisplayCurrency, isChangingCurrency, usdToDisplayRate, usdToLkrFetchedAt } =
     useCurrency();
 
   const initials = session?.user?.name
@@ -34,15 +34,19 @@ export function TopBar() {
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b border-border bg-background/80 backdrop-blur-xl px-4 md:px-6">
       <div className="hidden sm:block">
-        <p className="text-sm text-muted-foreground">
-          USD/LKR spot{" "}
-          <span className="text-foreground font-medium tabular-nums">{usdToLkrRate.toFixed(2)}</span>
-          {usdToLkrFetchedAt && (
-            <span className="ml-1.5 text-xs text-muted-foreground/70">
-              · updated {relativeTimeFromNow(usdToLkrFetchedAt)}
+        {displayCurrency !== "USD" && (
+          <p className="text-sm text-muted-foreground">
+            USD/{displayCurrency} spot{" "}
+            <span className="text-foreground font-medium tabular-nums">
+              {usdToDisplayRate.toFixed(2)}
             </span>
-          )}
-        </p>
+            {usdToLkrFetchedAt && (
+              <span className="ml-1.5 text-xs text-muted-foreground/70">
+                · updated {relativeTimeFromNow(usdToLkrFetchedAt)}
+              </span>
+            )}
+          </p>
+        )}
       </div>
 
       <div className="flex items-center gap-2">
